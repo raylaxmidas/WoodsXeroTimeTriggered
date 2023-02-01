@@ -12,7 +12,7 @@ from azure.identity import DefaultAzureCredential
 
 #Initialize our credentials:
 default_credential = DefaultAzureCredential(exclude_environment_credential = 1)
-#Connnect to the key vault and authenticate yourself:
+#Connnect to the key vault and authenticate:
 woods_key_vault = SecretClient(vault_url='https://woodskeys.vault.azure.net/',credential = default_credential)
 #Grab the blob connection string:
 blob_conn_string = woods_key_vault.get_secret(name = 'xero-blob-storage-connection-string')
@@ -21,11 +21,13 @@ container_client = ContainerClient.from_connection_string(conn_str=blob_conn_str
 
 def get_accounts():
     logging.info('Getting accounts data from Xero')    
+    
+    # 1) Refresh Xero API Tokens
     old_refresh_token = woods_key_vault.get_secret(name = 'xero-refresh-token')
     new_tokens = xero_api.XeroRefreshToken(old_refresh_token.value)
     xero_tenant_id = xero_api.XeroTenants(new_tokens[0])
 
-    # 1) API CALLS
+    # 2) API CALLS
     get_url = 'https://api.xero.com/api.xro/2.0/Accounts'
     response = requests.get(get_url,
                             headers = {
@@ -34,10 +36,10 @@ def get_accounts():
                                 'Accept': 'application/json'
                             }).json()
 
-    # 2) RESHAPE
+    # 3) Reshape response JSON.
     reshaped_response = reshape.reshape_accounts(response)
 
-    # 3) Saving data to a new blob in the container.
+    # 4) Saving data to a new blob in the container.
     filename = 'xero_live_accounts.json'
     container_client.upload_blob(
         name=filename,
