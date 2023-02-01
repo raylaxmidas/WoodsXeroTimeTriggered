@@ -1,6 +1,8 @@
 import json
 import requests
 import logging
+import datetime as dt
+from dateutil.relativedelta import relativedelta as datedelta
 
 from . import xero_api
 from . import reshape
@@ -19,30 +21,41 @@ blob_conn_string = woods_key_vault.get_secret(name = 'xero-blob-storage-connecti
 #Connect to the Container client:
 container_client = ContainerClient.from_connection_string(conn_str=blob_conn_string.value,container_name = 'woodsxerodata')
 
-def get_accounts():
-    logging.info('Getting accounts data from Xero')    
+def get_budget_summary():
+    logging.info('Getting budget summary data from Xero for the past 12 months.')  
     old_refresh_token = woods_key_vault.get_secret(name = 'xero-refresh-token')
     new_tokens = xero_api.XeroRefreshToken(old_refresh_token.value)
     xero_tenant_id = xero_api.XeroTenants(new_tokens[0])
-
+    
     # 1) API CALLS
-    get_url = 'https://api.xero.com/api.xro/2.0/Accounts'
-    response = requests.get(get_url,
-                            headers = {
-                                'Authorization': 'Bearer ' + new_tokens[0],
-                                'Xero-tenant-id': xero_tenant_id,
-                                'Accept': 'application/json'
-                            }).json()
+    # 1.1) Headers
+    HEADERS = { 'xero-tenant-id': xero_tenant_id,
+                'Authorization': 'Bearer ' + new_tokens[0],
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+    
+    # 1.2) API Call  
+    # From the last 12 months: 
+    from_date = (dt.date.today() + dt.timedelta(hours=12) + datedelta(day=1) - datedelta(months=12)).strftime("%Y-%m-%d")
+    logging.info('Collecting budget summary data from Xero from:')
+    logging.info(from_date)
+
+    URL = 'https://api.xero.com/api.xro/2.0/Reports/BudgetSummary' + '?date=' + from_date + '&periods=12&timeframe=1'
+    response = requests.request('GET', URL, headers=HEADERS).json()
 
     # 2) RESHAPE
-    reshaped_response = reshape.reshape_accounts(response)
+    reshaped_response = reshape.reshape_budget_summary(response)
 
-    # 3) Saving data to a new blob in the container.
-    filename = 'xero_live_accounts.json'
+    # 3) Saving data to a blob in the container.
+    filename = 'xero_live_bank_summary.json'
     container_client.upload_blob(
         name=filename,
         data=json.dumps(reshaped_response),
         blob_type='BlockBlob',
         overwrite=True
     )
-    logging.info('Completed account data import')    
+    
+    logging.info('Completed budget summary data import')  
+
+
