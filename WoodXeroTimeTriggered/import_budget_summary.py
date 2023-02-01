@@ -13,13 +13,22 @@ from azure.keyvault.secrets import SecretClient
 from azure.identity import DefaultAzureCredential
 
 #Initialize our credentials:
-default_credential = DefaultAzureCredential(exclude_environment_credential = 1)
+default_credential = DefaultAzureCredential(
+    exclude_environment_credential = 1)
+    
 #Connnect to the key vault and authenticate:
-woods_key_vault = SecretClient(vault_url='https://woodskeys.vault.azure.net/',credential = default_credential)
+woods_key_vault = SecretClient(
+    vault_url='https://woodskeys.vault.azure.net/',
+    credential = default_credential)
+
 #Grab the blob connection string:
-blob_conn_string = woods_key_vault.get_secret(name = 'xero-blob-storage-connection-string')
+blob_conn_string = woods_key_vault.get_secret(
+    name = 'xero-blob-storage-connection-string')
+
 #Connect to the container client:
-container_client = ContainerClient.from_connection_string(conn_str=blob_conn_string.value,container_name = 'woodsxerodata')
+container_client = ContainerClient.from_connection_string(
+    conn_str=blob_conn_string.value,
+    container_name = 'woodsxerodata')
 
 def get_budget_summary():
     logging.info('Getting budget summary data from Xero for the past 12 months.')  

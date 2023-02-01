@@ -11,6 +11,8 @@ from azure.identity import DefaultAzureCredential
 #from . import xero_api
 from . import import_accounts
 from . import import_budget_summary
+from . import import_contacts
+from . import import_invoices
 
 def main(mytimer: func.TimerRequest) -> None:
     logging.info('Running Woods Xero Data Pull')
@@ -25,6 +27,8 @@ def main(mytimer: func.TimerRequest) -> None:
     #Importing Data
     import_accounts.get_accounts()
     import_budget_summary.get_budget_summary()
+    import_contacts.get_contacts()
+    import_invoices.get_invoices()
 
     utc_timestamp = datetime.datetime.utcnow().replace(
         tzinfo=datetime.timezone.utc).isoformat()
@@ -32,5 +36,5 @@ def main(mytimer: func.TimerRequest) -> None:
     if mytimer.past_due:
         logging.info('The timer is past due!')
 
-    logging.info('Python timer trigger function ran at %s', utc_timestamp)
+    logging.info('Woods Xero data pull timer trigger function ran at %s', utc_timestamp)
 

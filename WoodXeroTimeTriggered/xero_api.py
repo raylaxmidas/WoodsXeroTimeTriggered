@@ -10,14 +10,22 @@ from azure.keyvault.secrets import SecretClient
 from azure.identity import DefaultAzureCredential
 
 #Initialize our credentials for Azure so we can access Keys.
-default_credential = DefaultAzureCredential(exclude_environment_credential = 1)
+default_credential = DefaultAzureCredential(
+    exclude_environment_credential = 1)
+
 #Connnect to the key vault and authenticate:
-woods_key_vault = SecretClient(vault_url='https://woodskeys.vault.azure.net/',credential = default_credential)
+woods_key_vault = SecretClient(
+    vault_url='https://woodskeys.vault.azure.net/',
+    credential = default_credential)
 
 #Grab the Xero Client id:
-client_id = woods_key_vault.get_secret(name = 'xero-client-id')
+client_id = woods_key_vault.get_secret(
+    name = 'xero-client-id')
+
 #Grab the Xero Client id:
-client_secret = woods_key_vault.get_secret(name = 'xero-client-secret')
+client_secret = woods_key_vault.get_secret(
+    name = 'xero-client-secret')
+
 #Other non - sensitive information for Xero API Connection:
 redirect_url = 'https://xero.com/'
 scope = 'offline_access accounting.transactions accounting.settings accounting.reports.read accounting.contacts accounting.budgets.read'

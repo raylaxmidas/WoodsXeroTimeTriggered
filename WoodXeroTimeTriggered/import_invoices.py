@@ -13,11 +13,11 @@ from azure.identity import DefaultAzureCredential
 #Initialize our credentials:
 default_credential = DefaultAzureCredential(
     exclude_environment_credential = 1)
-
-#Connnect to the key vault and authenticate:
+    
+#Connnect to the key vault and authenticate yourself:
 woods_key_vault = SecretClient(
     vault_url='https://woodskeys.vault.azure.net/',
-credential = default_credential)
+    credential = default_credential)
 
 #Grab the blob connection string:
 blob_conn_string = woods_key_vault.get_secret(
@@ -28,8 +28,9 @@ container_client = ContainerClient.from_connection_string(
     conn_str=blob_conn_string.value,
     container_name = 'woodsxerodata')
 
-def get_accounts():
-    logging.info('Getting accounts data from Xero')    
+#Getting Invoice Data:
+def get_invoices():
+    logging.info('Getting invoice data from Xero')    
     
     # 1) Refresh Xero API Tokens
     old_refresh_token = woods_key_vault.get_secret(name = 'xero-refresh-token')
@@ -37,7 +38,7 @@ def get_accounts():
     xero_tenant_id = xero_api.XeroTenants(new_tokens[0])
 
     # 2) API CALLS
-    get_url = 'https://api.xero.com/api.xro/2.0/Accounts'
+    get_url = 'https://api.xero.com/api.xro/2.0/Invoices'
     response = requests.get(get_url,
                             headers = {
                                 'Authorization': 'Bearer ' + new_tokens[0],
@@ -46,14 +47,14 @@ def get_accounts():
                             }).json()
 
     # 3) Reshape response JSON.
-    reshaped_response = reshape.reshape_accounts(response)
+    reshaped_response = reshape.reshape_invoices(response)
 
     # 4) Saving data to a new blob in the container.
-    filename = 'xero_live_accounts.json'
+    filename = 'xero_live_invoices.json'
     container_client.upload_blob(
         name=filename,
         data=json.dumps(reshaped_response),
         blob_type='BlockBlob',
         overwrite=True
     )
-    logging.info('Completed account data import')    
+    logging.info('Completed invoice data import')  
