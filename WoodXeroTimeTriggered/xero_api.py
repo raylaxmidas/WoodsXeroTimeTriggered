@@ -18,11 +18,11 @@ woods_key_vault = SecretClient(
     vault_url='https://woodskeys.vault.azure.net/',
     credential = default_credential)
 
-#Grab the Xero Client id:
+#Grab the Xero Client ID:
 client_id = woods_key_vault.get_secret(
     name = 'xero-client-id')
 
-#Grab the Xero Client id:
+#Grab the Xero Client Secret:
 client_secret = woods_key_vault.get_secret(
     name = 'xero-client-secret')
 
@@ -46,7 +46,7 @@ def XeroFirstAuth():
     
     #Manual input is not possible via Azure Function
     #auth_res_url = input('What is the response URL? ')
-    auth_res_url = 'What is the response URL? '
+    auth_res_url = 'What is the response URL?'
 
     start_number = auth_res_url.find('code=') + len('code=')
     end_number = auth_res_url.find('&scope')
