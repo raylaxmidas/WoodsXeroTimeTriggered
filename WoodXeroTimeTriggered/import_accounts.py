@@ -29,7 +29,7 @@ container_client = ContainerClient.from_connection_string(
     container_name = 'woodsxerodata')
 
 def get_accounts():
-    logging.info('Getting accounts data from Xero')    
+    logging.info('Getting accounts data from Xero.')    
     
     # 1) Refresh Xero API Tokens
     old_refresh_token = woods_key_vault.get_secret(name = 'xero-refresh-token')
@@ -56,4 +56,5 @@ def get_accounts():
         blob_type='BlockBlob',
         overwrite=True
     )
-    logging.info('Completed account data import')    
+    
+    logging.info('Completed account data import.')    

@@ -13,6 +13,7 @@ from . import import_accounts
 from . import import_budget_summary
 from . import import_contacts
 from . import import_invoices
+from . import import_pnl
 
 def main(mytimer: func.TimerRequest) -> None:
     logging.info('Running Woods Xero Data Pull')
@@ -29,6 +30,7 @@ def main(mytimer: func.TimerRequest) -> None:
     import_budget_summary.get_budget_summary()
     import_contacts.get_contacts()
     import_invoices.get_invoices()
+    import_pnl.get_pnl()
 
     utc_timestamp = datetime.datetime.utcnow().replace(
         tzinfo=datetime.timezone.utc).isoformat()

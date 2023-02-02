@@ -15,7 +15,7 @@ from azure.identity import DefaultAzureCredential
 #Initialize our credentials:
 default_credential = DefaultAzureCredential(
     exclude_environment_credential = 1)
-    
+
 #Connnect to the key vault and authenticate:
 woods_key_vault = SecretClient(
     vault_url='https://woodskeys.vault.azure.net/',
@@ -59,7 +59,7 @@ def get_budget_summary():
     reshaped_response = reshape.reshape_budget_summary(response)
 
     # 4) Saving data to a blob in the container.
-    filename = 'xero_live_bank_summary.json'
+    filename = 'xero_live_budget_summary.json'
     container_client.upload_blob(
         name=filename,
         data=json.dumps(reshaped_response),

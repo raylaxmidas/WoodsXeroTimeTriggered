@@ -13,7 +13,7 @@ from azure.identity import DefaultAzureCredential
 #Initialize our credentials:
 default_credential = DefaultAzureCredential(
     exclude_environment_credential = 1)
-    
+
 #Connnect to the key vault and authenticate yourself:
 woods_key_vault = SecretClient(
     vault_url='https://woodskeys.vault.azure.net/',
@@ -29,7 +29,7 @@ container_client = ContainerClient.from_connection_string(
     container_name = 'woodsxerodata')
 
 def get_contacts():
-    logging.info('Getting contacts data from Xero:')  
+    logging.info('Getting contacts data from Xero.')  
     
     # 1) Refresh Xero API Tokens
     old_refresh_token = woods_key_vault.get_secret(name = 'xero-refresh-token')
@@ -56,3 +56,5 @@ def get_contacts():
         blob_type='BlockBlob',
         overwrite=True
     )
+
+    logging.info('Completed contacts data import')  
