@@ -4,6 +4,7 @@
 
 azure-functions
 requests
+chardet
 
 msrest == 0.6.18
 msrestazure == 0.6.4

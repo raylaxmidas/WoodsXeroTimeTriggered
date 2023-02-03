@@ -1,28 +1,28 @@
 # Woods Xero Time Triggered
 The following Azure Function `WoodsXeroTimeTriggered` is used to pull data from the Xero API for Woods. The information from the Xero API is generally heavily nested hence some unnesting is carried out within the `reshape.py` function as well. Once the information is pulled out and reshaped; the JSON files are landed to a container. 
 
-From here the JSON files are picked up by a schduled pipeline and stored in a tablular manner to a Azure SQL Sever. For accounts, contacts and invoices the entire table is dropped from the SQL Sever and the new data from the JSON file is added. In the case of the budget summery, and profit and loss data the tables are retained in the SQL Sever and additional rows are appended on. This is because for accounts, contacts and invoices the entire history can be pulled from the Xero API.
+From here the JSON files are picked up by a schduled pipeline and stored in a tablular manner to a Azure SQL Sever. For accounts, contacts and invoices the entire table is dropped from the SQL Sever and the new data from the JSON file is added. In the case of the budget summery, and the profit and loss data the tables are retained in the SQL Sever and additional rows are appended on. This is because for accounts, contacts and invoices the entire history can be pulled from the Xero API.
 
-The PowerBI Dashboard accesses the data from the SQL Sever.
+The PowerBI Dashboard pulls the data from the SQL Sever.
 
-Through out this code tokens and secrets have been stored within an Azure Key Vault so the source code does not hold this sensitive information.
+Through out this code tokens and secrets have been stored within an Azure Key Vault so the source code does not hold any sensitive information.
 
-The code the function will access data stored within the `lumatrainingstorage` storage account and secrets within the `WoodsKeys` Key Vault. An Azure login will be required which has permission to access both of these reasources in order to run this function locally on your machine.
+The function will gets/lands data stored within the `lumatrainingstorage` storage account and secrets within the `WoodsKeys` Key Vault. An Azure login will be required which has permission to access both of these reasources in order to run this function locally on your machine.
 
 The function has been set up to run on a weekly basis.
 
 ## Notes about debugging / running Azure Functions Locally:
-When Azure functions run locally they must have have a `__init__.py` file with a main function. This main function will run when during each debugging session. Each time the function is run the `tasks.json` is also excuted. These "tasks" mainly relate to intalling the packages found in the requirements.txt file. Azure functions will install the packages everytime the function is trigger in the cloud.
+When Azure functions run locally they must have have a `__init__.py` file with a main function. This main function will run during each debugging session. Each time the function is run the `tasks.json` is excuted. These "tasks" mainly relate to intalling the packages found in the requirements.txt file. Azure functions will install the packages everytime the function is trigger in the cloud.
 
 ## Helpful Resources:
 The following resources may be helpful in udnerstanding some of the concepts used for this Azure Function.
 
-* Access The Xero API using Python & OAuth2 (Xero Integrations Tutorial) - https://www.youtube.com/watch?v=t0DgAMgN8VY
-* Microsoft Azure Overview: Creating a Service Principal - https://www.youtube.com/watch?v=J7zb-a8Bjzo
-* Microsoft Azure Overview: The Azure Python SDK - https://www.youtube.com/watch?v=5oIcT0HCrvI&t=603s
-* Azure Functions in Python | Timer Triggers Pt. 1 - https://www.youtube.com/watch?v=2QVNJZmE5e0&list=RDCMUCBsTB02yO0QGwtlfiv5m25Q&index=4 
-* Azure Functions in Python | Timer Triggers Pt. 2 -  https://www.youtube.com/watch?v=OXnfKYwnoVk&list=RDCMUCBsTB02yO0QGwtlfiv5m25Q&index=6
-* Azure Functions in Python | Timer Triggers Pt. 3 - https://www.youtube.com/watch?v=egLrNS0dq50&list=RDCMUCBsTB02yO0QGwtlfiv5m25Q&index=6
+* [Access The Xero API using Python & OAuth2 (Xero Integrations Tutorial)](https://www.youtube.com/watch?v=t0DgAMgN8VY)
+* [Microsoft Azure Overview: Creating a Service Principal](https://www.youtube.com/watch?v=J7zb-a8Bjzo)
+* [Microsoft Azure Overview: The Azure Python SDK](https://www.youtube.com/watch?v=5oIcT0HCrvI)
+* [Azure Functions in Python | Timer Triggers Pt. 1](https://www.youtube.com/watch?v=2QVNJZmE5e0) 
+* [Azure Functions in Python | Timer Triggers Pt. 2]( https://www.youtube.com/watch?v=OXnfKYwnoVk)
+* [Azure Functions in Python | Timer Triggers Pt. 3](https://www.youtube.com/watch?v=egLrNS0dq50)
 
 ## Common Azure Commands Used Throughout Function
 ### 1. `default_credential = DefaultAzureCredential(exclude_environment_credential = 1)`
@@ -45,13 +45,14 @@ In our case we have setup a enviroment credential (RayWoods) and also have acces
 * `xero-refresh-token` is a constantly refreshing token used to access the Xero API. The refreshing process for tokens can be found in the module `xero_api`. The following functions are used to access and set the refresh token secret respectively: `old_refresh_token = woods_key_vault.get_secret(name = 'xero-refresh-token')` and `woods_key_vault.set_secret('xero-refresh-token',new_refresh_token)` 
 
 ### 3. `container_client = ContainerClient.from_connection_string(conn_str=blob_conn_string.value,container_name = 'woodsxerodata')`
-Creates a client which allows the function interact with a specific container. In our case this is `woodsxerodata`.
+Creates a client which allows the function to interact with a specific container. In our case this is `woodsxerodata`.
 
 ### 4. `container_client.upload_blob(name=filename, data=json.dumps(reshaped_response), blob_type='BlockBlob', overwrite=True)`
 This function allows us to upload a JSON file pulled from the Xero API into the `woodsxerodata` container. In all upload cases the original file is overwritten.
 
-### Uploading to Blob Storage
-In the case of profit and loss data being pull from Xero. The profit and loss is pulled on a monthly level across the entirity of last year from the day the function is run. The existing JSON is read in so the historial data can be appended to the new month pulled within a loop using the following Azure functions:
+### Downloading to Blob Storage for Profit and Loss Data
+The profit and loss is pulled on a monthly level across the last year from the day the function is run. As each month is pulled from API one at a time they need to need to appended together. To achieve within each loop that grabs a month, the JSON file is read from the blob, all historical data is selected and the new month is appended on. This historical data and current month pulled within the loop is then saved to the blob storage. The part of the code which completes this process is shown below:
+
 ```
 # 4.1) Establishing Connection to PnL Blob
 filename = "xero_live_profit_and_loss.json"
@@ -75,13 +76,13 @@ pnl = historical + reshaped_response
 ```
 
 ## Development Environment Setup
-In order to run this function within a locally within VS Code, various extensions, packages and environment variables must be configured correctly. 
+In order to run this function locally within VS Code, various extensions, packages and environment variables must be configured correctly. 
 
 ### Extensions
 For for VS Code ensure that the following extensions have been created.
 * Azure Resources.
 * Azure Functions.
-* Azure CLI Tools Extension and Azure CLI from https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-windows?tabs=azure-cli
+* Azure CLI Tools Extension and Azure CLI from [here.](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-windows?tabs=azure-cli)
 * Azure Account.
 * Dev Containers
 
@@ -90,13 +91,13 @@ Once these are installed log into Azure via opening the terminal using <kbd>Ctrl
 ### Creating Service Principal
 For the purpose of our local testing we have used a workplace email address / VisualStudioCodeCredential. In other words we are signed in to VS Code with our workplace email which has permissions to the `lumatrainingstorage` Storage Account and `WoodsKeys` Key Vault. Thus the `DefaultAzureCredential(exclude_environment_credential = 1)` will use this as a basis to authenticate the function when running locally.
 
-However, a Service Principal (SP) was setup which has access to these resources should another user require access without a workplace login.
+However, a Service Principal (SP) was setup which has access to these resources should another user need access without a workplace login.
 
 The following command was used to create the RayWoods SP:
 ```
 az ad sp create-for-rbac --name RayWoods --skip-assignment --sdk-auth > RayWoodsAzureSP.json
 ```
-This function creates the SP and stores details in RayWoodsAzureSP.json. This JSON file can be found on `C:\Users\RayLaxmidas\Luma Analytics\Lumineers - Documents\7 Clients\Woods\Data Engineering\RayWoods Service Principal.7z\`. 
+This function creates the SP and stores details in RayWoodsAzureSP.json. This JSON file can be found on `C:\Users\RayLaxmidas\Luma Analytics\Lumineers(Documents\7 Clients\Woods\Data Engineering\RayWoods Service Principal.7z\`. 
 
 Within the JSON file tihe clientID, clientSecret, subscriptionID and tenantID are stored. These values were taken and add to the environment variables by running the following script in a .cmd file.
 
@@ -128,7 +129,7 @@ The `WoodsXeroTimeTriggered` function used the following setup procedure:
 2. Create a project folder and open this within VS Code.
 3. Go to the Azure Extension.
 4. Under "WORKSPACE Local" click create function.
-5. Select "Timer Trigger", provide a function name, select a trigger cycle with a CRON expression (https://arminreiter.com/2017/02/azure-functions-time-trigger-cron-cheat-sheet/). Note the time trigger cycle can be editted from the function.json file.
+5. Select "Timer Trigger", provide a function name, select a trigger cycle using a CRON expression (https://arminreiter.com/2017/02/azure-functions-time-trigger-cron-cheat-sheet/). Note the time trigger cycle can be editted from the function.json file.
 6. Add core Azure packages to the requirements file shown below.
 7. Install requirments using `pip install -r requirements.txt`. Ensure the virtual environment is activated before running this command.
 
@@ -154,18 +155,26 @@ azure-keyvault-secrets == 4.2.0
 The main function has the following bit of code which has been commented out. 
 
 ```
-##Xero API Access Initialization Process:
+#Xero API Access Initialization Process:
 #tokens = xero_api.XeroFirstAuth()
 #xero_api.XeroRefreshToken(tokens[1])
 ##Run a test request from Xero API:
 #xero_api.XeroRequestTest()    
 ```
 
-These commands assist initialization of the Xero API when the API is accessed for the first time or tokens have expired/lost etc. If the Xero API needs to be initialized then these lines need to be uncommented.
+These commands assist initialization of the Xero API when the API is accessed for the first time or tokens have expired/lost etc. 
 
-Note when running the `xero_api.XeroFirstAuth()` a breakpoint need to be entered within the `xero_api.py` file after the line which reads `    auth_res_url = 'What is the response URL?'`. This is because the Azure Function cannot take in a keyboard entry for the `auth_res_url`. Hence once the webbrowser is opened an an authorization url is returned; use the variable editor in the debugging session to manually enter in this URL. Once complete let the script continue.
+To intialize the Xero API follow the procedure below:
 
-```
+1.  Ensure the `xero-client-id` and `xero-client-secret` sourced from `https://developer.xero.com/ > Log In > MyApps > LumaAnalytics > Configuration` are correct.
+2. Uncomment the code shown above in the `__init__.py` file.
+3. Enter a break point in the `xero_api.py` file after the line which reads `auth_res_url = 'What is the response URL?'`. This need to happen as we cannot use `input()` in an Azure function. See the code extract below for the location of the breakpoint.
+4. Run the Azure function in a debugging session.
+5. A web browser will open. Authorise the the Xero application and copy the authorisation URL.
+6. Use the variable editor to manually enter the `auth_res_url`, remembering to ''.
+7. Once complete let the script continue.
+
+```diff
 def XeroFirstAuth():
     # 1. Send a user to authorize your app:
     auth_url = ('''https://login.xero.com/identity/connect/authorize?''' +
@@ -182,7 +191,7 @@ def XeroFirstAuth():
     #auth_res_url = input('What is the response URL? ')
     auth_res_url = 'What is the response URL?'
 
-<<<<<<<<<<INSERT BREAK POINT HERE>>>>>>>>>>>
+-<INSERT BREAK POINT HERE>-
 
     start_number = auth_res_url.find('code=') + len('code=')
     end_number = auth_res_url.find('&scope')
