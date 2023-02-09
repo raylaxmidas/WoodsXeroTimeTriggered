@@ -31,7 +31,7 @@ This function is at the top of each import module.
 
 This function provides the authentication for the function to communicate to the Azure resources. It uses various credential types. More information can be found here: https://learn.microsoft.com/en-us/dotnet/api/azure.identity.defaultazurecredential?view=azure-dotnet
 
-In our case we have setup a enviroment credential (RayWoods) and also have access via VS Code being logged into Azure using our/my workplace email address. We will use the latter hence enviroment credentials has been excluded using an additional parameter.
+In our case we have setup a enviroment credential (RayWoods) and also have access via VS Code being logged into Azure using our/my workplace email address. We will use the latter hence enviroment credentials has been excluded using an additional parameter. When deploying the app `exclude_environment_credential = 1` needs to be removed, see the "Deploying the Application to Azure" section for more details.
 
 ### 2. `woods_key_vault = SecretClient(vault_url='https://woodskeys.vault.azure.net/' credential = default_credential)`
  
@@ -200,4 +200,18 @@ def XeroFirstAuth():
     logging.info(auth_code)
     ...
 ```
+
+## Deploying the Application to Azure
+When deploying this function to Azure we need to consider the function will no longer be running in the local environment. Within the local environment the function is used the Azure Sign In Authentication.
+
+The function will now be running within Azure and require it's own authentication for the resources it uses. The main issue/error which the function will encounter in authorisation of the application. In order to overcome authorisation error the following process was followed:
+
+1. Prior to deployment remove `exclude_environment_credential = 1` from any where in the code that `default_credential = DefaultAzureCredential(exclude_environment_credential = 1)` appears.
+2. Adjust the CRON expression in the function.json file. Generally the default CRON expression is `0 */5 * * * *` so that the function runs every 5 mins when debugging locally. Once deployed we'd likely want a different cycle such as `0 0 0 * * 0` which is weekly on Sunday.
+3. Deploy the function to Azure to existing function application which has been made and overwrite any existing the initialize function in the cloud.
+4. Go to Microsoft Azure Home → Function Apps → [Function Name] → Identity → Status → Set to ON and Save → Copy Object (principal) ID.
+5. Go to Microsoft Azure Home → Key Vaults → [Key Vault Name] → Access Policies → Create → Provide Secret Management → Under Principal Search the Object ID Copied → Create Policy.
+6. Go to Microsoft Azure Home → Storage Accounts → [Storage Account Name] → [Container Name] → Access Policies → Add Policy → Paste in Identifier (which is the Object (principal) ID from step 4) → Provide All Permission.
+
+
 

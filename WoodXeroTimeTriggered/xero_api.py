@@ -10,8 +10,7 @@ from azure.keyvault.secrets import SecretClient
 from azure.identity import DefaultAzureCredential
 
 #Initialize our credentials for Azure so we can access Keys.
-default_credential = DefaultAzureCredential(
-    exclude_environment_credential = 1)
+default_credential = DefaultAzureCredential()
 
 #Connnect to the key vault and authenticate:
 woods_key_vault = SecretClient(
