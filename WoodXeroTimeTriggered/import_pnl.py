@@ -23,7 +23,7 @@ credential = default_credential)
 
 #Grab the blob connection string:
 blob_conn_string = woods_key_vault.get_secret(
-    name = 'xero-blob-storage-connection-string')
+    name = 'blob-storage-connection-string')
 
 #Connect to the Container client:
 container_client = ContainerClient.from_connection_string(
