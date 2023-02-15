@@ -51,7 +51,7 @@ def get_pnl():
         
         # 2.2) API Call
         FROM_DATE = (dt.date.today() + dt.timedelta(hours=12) + datedelta(day=1) - datedelta(months=i)).strftime("%Y-%m-%d")
-        TO_DATE = (dt.date.today() + dt.timedelta(hours=12) + datedelta(day=31) - datedelta(months=i)).strftime("%Y-%m-%d")
+        TO_DATE = ((dt.date.today() + dt.timedelta(hours=12) + datedelta(day=1) - datedelta(months=i)) + dt.timedelta(hours=12) + datedelta(day=31)).strftime("%Y-%m-%d")
         
         logging.info("Pulling pnl data from: ")
         logging.info(FROM_DATE)
