@@ -8,12 +8,13 @@ from azure.storage.blob import ContainerClient
 from azure.keyvault.secrets import SecretClient
 from azure.identity import DefaultAzureCredential
 
-#from . import xero_api
+from . import xero_api
 from . import import_accounts
 from . import import_budget_summary
 from . import import_contacts
 from . import import_invoices
 from . import import_pnl
+from . import import_budget_full
 
 def main(mytimer: func.TimerRequest) -> None:
     logging.info('Running Woods Xero Data Pull')
@@ -31,6 +32,7 @@ def main(mytimer: func.TimerRequest) -> None:
     import_contacts.get_contacts()
     import_invoices.get_invoices()
     import_pnl.get_pnl()
+    import_budget_full.get_budget_full()
 
     utc_timestamp = datetime.datetime.utcnow().replace(
         tzinfo=datetime.timezone.utc).isoformat()
