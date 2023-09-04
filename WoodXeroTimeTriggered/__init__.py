@@ -13,6 +13,7 @@ from . import import_accounts
 from . import import_budget_summary
 from . import import_contacts
 from . import import_invoices
+from . import import_credit_notes
 from . import import_pnl
 from . import import_budget_full
 
@@ -31,6 +32,7 @@ def main(mytimer: func.TimerRequest) -> None:
     import_budget_summary.get_budget_summary()
     import_contacts.get_contacts()
     import_invoices.get_invoices()
+    import_credit_notes.get_credit_notes()
     import_pnl.get_pnl()
     import_budget_full.get_budget_full()
 
