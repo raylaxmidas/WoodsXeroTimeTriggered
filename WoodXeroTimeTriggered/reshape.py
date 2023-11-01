@@ -1,5 +1,6 @@
 import re
 import datetime as dt
+import calendar
 from dateutil.relativedelta import relativedelta as datedelta
 
 # EPOCH TO YMD
@@ -7,6 +8,19 @@ def epoch_ymd(x):
     s = re.findall('(?<=\().*?(?=\+)', x)[0]
     date = dt.datetime.utcfromtimestamp(float(s)/1000.)
     return date.strftime("%Y-%m-%d")
+
+# Adjusted version of your function to handle date strings both with and without the `+` symbol
+def epoch_ymd_adjusted(x):
+    s = re.findall('(?<=\().*?(?=\+|\))', x)[0]
+    date = dt.datetime.utcfromtimestamp(float(s)/1000.)
+    return date.strftime("%Y-%m-%d")
+
+# Converts period strings of the format "YYYY-MM" into "YYYY-MM-DD", 
+# where DD is the last day of the respective month
+def convert_period_to_last_day(period_str):
+    year, month = map(int, period_str.split('-'))
+    _, last_day = calendar.monthrange(year, month)
+    return f"{year}-{month:02d}-{last_day:02d}"
 
 # UNNEST - RETURN ITEMS ONLY
 def unnest_short(_dic):
@@ -223,3 +237,57 @@ def reshape_creditnotes(_dic):
 
     return OUTPUT
 
+# Main function
+
+def reshape_budget(data):
+    # Extract the top-level DateTimeUTC
+    top_level_datetime_utc = data.get('DateTimeUTC', None)
+    if top_level_datetime_utc:
+        top_level_datetime_utc = epoch_ymd_adjusted(top_level_datetime_utc)
+    
+    # Initialize an empty list to store flattened records
+    flattened_records = []
+    
+    # Iterate over each budget
+    for budget in data['Budgets']:
+        # Extract values from the budget level using the .get() method for consistency
+        description = budget.get('Description', "Unknown Description")
+        updated_date_utc = budget.get('UpdatedDateUTC', None)
+        if updated_date_utc:
+            updated_date_utc = epoch_ymd_adjusted(updated_date_utc)
+        
+        # Extract other common fields from the budget and include the top-level DateTimeUTC
+        budget_common_fields = {
+            'DateTimeUTC': top_level_datetime_utc,
+            'BudgetID': budget.get('BudgetID', None),
+            'Status': budget.get('Status', None),
+            'Type': budget.get('Type', None),
+            'UpdatedDateUTC': updated_date_utc,
+            'Description': description
+        }
+        
+        # Iterate over each budget line
+        for line in budget['BudgetLines']:
+            # Extract common fields from the budget line
+            line_common_fields = {
+                'AccountID': line.get('AccountID', None),
+                'AccountCode': line.get('AccountCode', None)
+            }
+            
+            # Iterate over each budget balance
+            for balance in line['BudgetBalances']:
+                # Convert period to the desired format
+                final_period = convert_period_to_last_day(balance['Period'])
+                
+                # Construct a flattened record by combining common fields with balance details
+                record = {
+                    **budget_common_fields,
+                    **line_common_fields,
+                    'Period': final_period,
+                    'Amount': balance['Amount']
+                }
+                
+                # Append the flattened record to the list
+                flattened_records.append(record)
+                
+    return flattened_records

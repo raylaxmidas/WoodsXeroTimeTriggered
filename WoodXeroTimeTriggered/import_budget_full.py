@@ -32,32 +32,62 @@ container_client = ContainerClient.from_connection_string(
 def get_budget_full():
     logging.info('Getting full budget data from Xero for the past 24 months.')  
     
-    # 1) Refresh Xero API Tokens
+    #Refresh Xero API Tokens
     old_refresh_token = woods_key_vault.get_secret(name = 'xero-refresh-token')
     new_tokens = xero_api.XeroRefreshToken(old_refresh_token.value)
     xero_tenant_id = xero_api.XeroTenants(new_tokens[0])
     
-    # 2) API CALLS
-    # 2.1) Headers
+    #API CALLS
+    #Headers
     HEADERS = { 'xero-tenant-id': xero_tenant_id,
                 'Authorization': 'Bearer ' + new_tokens[0],
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
             }
     
-    # 2.2) API Call  
-    #From the last 12 months: 
-    from_date = (dt.date.today() + dt.timedelta(hours=12) + datedelta(day=1) - datedelta(months=12)).strftime("%Y-%m-%d")
-    logging.info('Collecting full budget data from Xero from:')
-    logging.info(from_date)
+    #API Call  
+    #Date two years ago from today
+    DateFrom = (dt.date.today() - dt.timedelta(days=365*2)).strftime("%Y-%m-%d")
 
-    #Using the revised budget frrom woods
-    BudgetID = '/8fe9c821-7eaf-453f-abd6-a15ce1f6620c'
+    #Today's date
+    DateTo = dt.date.today().strftime("%Y-%m-%d")
 
-    URL = '	https://api.xero.com/api.xro/2.0/Budgets' + '?date=' + from_date + '&periods=12&timeframe=1' + BudgetID
+    logging.info('Collecting all budget data from Xero from:')
+    logging.info(DateFrom)
+    logging.info('to')
+    logging.info(DateTo)
+
+    URL = '	https://api.xero.com/api.xro/2.0/Budgets'
     response = requests.request('GET', URL, headers=HEADERS).json()
 
-    #with open('response.json', 'w') as f:
-    #    json.dump(response, f)
+    #Get the list of budget IDs.
+    budget_ids = [budget["BudgetID"] for budget in response["Budgets"]]
 
-    logging.info('Getting full budget data from Xero for the past 12 months.')  
+    #Loop through each BudgetID.
+    for budget_id in budget_ids:
+        logging.info('Collecting data for budget ID:')
+        logging.info(budget_id)
+
+        #Append the BudgetID to the URL.
+        budget_url = '	https://api.xero.com/api.xro/2.0/Budgets' + '/' + budget_id + '?dateTo=' + DateTo  + '&dateFrom=' + DateFrom
+
+        #Make the request to the API.
+        budget_response = requests.get(budget_url, headers=HEADERS).json()
+
+        # Process the response data
+        reshaped_response = reshape.reshape_budget(budget_response)
+        
+        #Saving data to a blob in the container.
+        filename = f'xero_live_budget_full_{budget_id}.json'
+        container_client.upload_blob(
+            name=filename,
+            data=json.dumps(reshaped_response),
+            blob_type='BlockBlob',
+            overwrite=True
+        )
+
+        # Save the reshaped data to a file
+        #with open(f"budget_{budget_id}.json", "w") as file:
+            #json.dump(reshaped_data, file)
+
+    logging.info('Completed full budget data data import.')  
