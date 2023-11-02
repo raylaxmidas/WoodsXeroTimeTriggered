@@ -15,11 +15,12 @@ def epoch_ymd_adjusted(x):
     date = dt.datetime.utcfromtimestamp(float(s)/1000.)
     return date.strftime("%Y-%m-%d")
 
-# Converts period strings of the format "YYYY-MM" into "YYYY-MM-DD",
-# where DD is the first day of the respective month
-def convert_period_to_first_day(period_str):
+# Converts period strings of the format "YYYY-MM" into "YYYY-MM-DD", 
+# where DD is the last day of the respective month
+def convert_period_to_last_day(period_str):
     year, month = map(int, period_str.split('-'))
-    return f"{year}-{month:02d}-01"
+    _, last_day = calendar.monthrange(year, month)
+    return f"{year}-{month:02d}-{last_day:02d}"
 
 # UNNEST - RETURN ITEMS ONLY
 def unnest_short(_dic):
@@ -276,7 +277,7 @@ def reshape_budget(data):
             # Iterate over each budget balance
             for balance in line['BudgetBalances']:
                 # Convert period to the desired format
-                final_period = convert_period_to_first_day(balance['Period'])
+                final_period = convert_period_to_last_day(balance['Period'])
                 
                 # Construct a flattened record by combining common fields with balance details
                 record = {
