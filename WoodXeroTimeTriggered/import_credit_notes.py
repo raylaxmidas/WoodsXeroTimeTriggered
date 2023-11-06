@@ -31,7 +31,7 @@ container_client = ContainerClient.from_connection_string(
 def get_credit_notes():
     logging.info('Getting credit note data from Xero')    
     
-    # 1) Refresh Xero API Tokens
+    #Refresh Xero API Tokens
     old_refresh_token = woods_key_vault.get_secret(name = 'xero-refresh-token')
     new_tokens = xero_api.XeroRefreshToken(old_refresh_token.value)
     xero_tenant_id = xero_api.XeroTenants(new_tokens[0])
@@ -45,10 +45,10 @@ def get_credit_notes():
                                 'Accept': 'application/json'
                             }).json()
 
-    # 3) Reshape the response and save to disk:
+    #Reshape the response and save to disk:
     reshaped_response = reshape.reshape_creditnotes(response)
 
-    # 4) Saving data to a new blob in the container.
+    #Saving data to a new blob in the container.
     filename = 'xero_credit_notes_live.json'
     container_client.upload_blob(
         name=filename,

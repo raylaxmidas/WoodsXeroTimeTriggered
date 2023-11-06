@@ -29,43 +29,39 @@ container_client = ContainerClient.from_connection_string(
     conn_str=blob_conn_string.value,
     container_name = 'woodsxerodata')
 
-def get_budget_summary():
-    logging.info('Getting budget summary data from Xero for the past 12 months.')  
+def get_tracking_categories():
+    logging.info('Getting tracking categories from Xero.')  
     
-    #Refresh Xero API Tokens
+    #Refresh Xero API Tokens:
     old_refresh_token = woods_key_vault.get_secret(name = 'xero-refresh-token')
     new_tokens = xero_api.XeroRefreshToken(old_refresh_token.value)
     xero_tenant_id = xero_api.XeroTenants(new_tokens[0])
     
     #API CALLS
-    #Headers
+    #Headers:
     HEADERS = { 'xero-tenant-id': xero_tenant_id,
                 'Authorization': 'Bearer ' + new_tokens[0],
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
             }
-    
-    #API Call  
-    #From the last 12 months: 
-    from_date = (dt.date.today() + dt.timedelta(hours=12) + datedelta(day=1) - datedelta(months=12)).strftime("%Y-%m-%d")
-    logging.info('Collecting budget summary data from Xero from:')
-    logging.info(from_date)
 
-    URL = 'https://api.xero.com/api.xro/2.0/Reports/BudgetSummary' + '?date=' + from_date + '&periods=12&timeframe=1'
+    URL = '		https://api.xero.com/api.xro/2.0/TrackingCategories'
     response = requests.request('GET', URL, headers=HEADERS).json()
 
-    #Reshape response JSON.
-    reshaped_response = reshape.reshape_budget_summary(response)
+    #Flatten the tracking categories:
+    reshaped_response = reshape.reshape_tracking_categories(response)
 
-    #Saving data to a blob in the container.
-    filename = 'xero_live_budget_summary.json'
+    #Saving reshaped data to a blob in the container.
+    filename = 'xero_live_tracking_categories.json'
     container_client.upload_blob(
-        name=filename,
-        data=json.dumps(reshaped_response),
-        blob_type='BlockBlob',
-        overwrite=True
-    )
-    
-    logging.info('Completed budget summary data import')  
+            name=filename,
+            data=json.dumps(reshaped_response),
+            blob_type='BlockBlob',
+            overwrite=True
+        )
 
-    
+    # Save the reshaped data to a file:
+    #with open(f"TC.json", "w") as file:
+    #    json.dump(reshaped_response, file)
+
+    logging.info('Completed tracking categories data import.')  

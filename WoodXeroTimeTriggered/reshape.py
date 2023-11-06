@@ -3,6 +3,8 @@ import datetime as dt
 import calendar
 from dateutil.relativedelta import relativedelta as datedelta
 
+#-------------------------------------------------------------------------------
+#Helper Functions:
 # EPOCH TO YMD
 def epoch_ymd(x):
     s = re.findall('(?<=\().*?(?=\+)', x)[0]
@@ -60,7 +62,8 @@ def unnest_report(_dic):
 
     return _title, _items, _accID
 
-# RESHAPE
+#-------------------------------------------------------------------------------
+#Reshaping function for contacts:
 def reshape_contacts(_dic):
     # Get report
     CONTACTS = _dic['Contacts']
@@ -73,6 +76,7 @@ def reshape_contacts(_dic):
                 i[key] = None
     return CONTACTS
 
+#Reshaping function for accounts:
 def reshape_accounts(_dic):
     # Get report
     ACCOUNTS = _dic['Accounts']
@@ -85,7 +89,7 @@ def reshape_accounts(_dic):
                 i[key] = None
     return ACCOUNTS
 
-
+#Reshaping function for bank accounts:
 def reshape_bank(_dic, _date):
     # Separate columns from values
     CONTENTS = [x for x in [x['Value'] for x in _dic['Reports'][0]['Rows'][0]['Cells']] if x!='']
@@ -108,6 +112,7 @@ def reshape_bank(_dic, _date):
             RESHAPED.append(DIC)
     return RESHAPED
 
+#Reshaping function for bank transfers:
 def reshape_bank_transfers(_dic):
     # Get report
     BANKTRANSFERS = _dic['BankTransfers']
@@ -120,6 +125,7 @@ def reshape_bank_transfers(_dic):
                 i[key] = None
     return BANKTRANSFERS
 
+#Reshaping function for budget summary:
 def reshape_budget_summary(_dic):
     # Get report
     REPORT = _dic['Reports'][0]['Rows']
@@ -137,7 +143,7 @@ def reshape_budget_summary(_dic):
         ACCID += _ACCID
     # Reshape
     COLUMNS = ['Type', 'Account', 'AccID', 'Month', 'Amount']
-    RESHAPED = []
+    BUDGET_SUMMARY = []
     for i in range(0, len(ITEMS)):
         for j in range(1, len(ITEMS[i])):
             DIC = {'Type':NAMES[i]}
@@ -145,10 +151,11 @@ def reshape_budget_summary(_dic):
             DIC['AccID'] = ACCID[i]
             DIC['Month'] = DATES[j-1]
             DIC['Amount'] = ITEMS[i][j]
-            RESHAPED.append(DIC)
+            BUDGET_SUMMARY.append(DIC)
 
-    return RESHAPED
+    return BUDGET_SUMMARY
 
+#Reshaping function for invoices:
 def reshape_invoices(_dic):
     # Get report
     INVOICES = _dic['Invoices']
@@ -166,6 +173,7 @@ def reshape_invoices(_dic):
 
     return INVOICES
 
+#Reshaping function for profit and loss statement:
 def reshape_pnl(_dic, FROM_DATE, TO_DATE):
     # Get report
     REPORT = _dic['Reports'][0]['Rows']
@@ -182,7 +190,7 @@ def reshape_pnl(_dic, FROM_DATE, TO_DATE):
         ACCID += _ACCID
     # Reshape
     COLUMNS = ['Type', 'Account', 'AccID', 'TrackingOption', 'Amount', 'FromDate', 'ToDate']
-    RESHAPED = []
+    PNL = []
     for i in range(0, len(ITEMS)):
         for j in range(1, len(ITEMS[i])):
             DIC = {'Type':NAMES[i]}
@@ -192,12 +200,13 @@ def reshape_pnl(_dic, FROM_DATE, TO_DATE):
             DIC['Amount'] = ITEMS[i][j]
             DIC['FromDate'] = FROM_DATE
             DIC['ToDate'] = TO_DATE
-            RESHAPED.append(DIC)
+            PNL.append(DIC)
     
-    return RESHAPED
+    return PNL
 
+#Reshaping function for credit notes:
 def reshape_creditnotes(_dic):
-    OUTPUT = []
+    CREDITNOTES = []
     NOTES = _dic['CreditNotes']
     for i in NOTES:
     # Convert to readable date
@@ -223,7 +232,7 @@ def reshape_creditnotes(_dic):
                 for key in NOTE['Contact']:
                     NOTE['Contact.' + key] = str(NOTE['Contact'][key])
                 del NOTE['Contact']
-                OUTPUT.append(NOTE)
+                CREDITNOTES.append(NOTE)
         # No Allocations: Contacts + None Allocations
         else:
             for key in ['Amount', 'Date', 'InvoiceID', 'InvoiceNumber']:
@@ -233,12 +242,11 @@ def reshape_creditnotes(_dic):
             for key in i['Contact']:
                 i['Contact.' + key] = str(i['Contact'][key])
             del i['Contact']
-            OUTPUT.append(i)
+            CREDITNOTES.append(i)
 
-    return OUTPUT
+    return CREDITNOTES
 
-# Main function
-
+#Reshaping the Budget Data
 def reshape_budget(data):
     # Extract the top-level DateTimeUTC
     top_level_datetime_utc = data.get('DateTimeUTC', None)
@@ -246,7 +254,7 @@ def reshape_budget(data):
         top_level_datetime_utc = epoch_ymd_adjusted(top_level_datetime_utc)
     
     # Initialize an empty list to store flattened records
-    flattened_records = []
+    BUDGET_FULL = []
     
     # Iterate over each budget
     for budget in data['Budgets']:
@@ -266,6 +274,26 @@ def reshape_budget(data):
             'Description': description
         }
         
+        # Check for tracking data and get up to two sets of tracking information
+        tracking_fields = {
+            'TrackingName1': None,
+            'TrackingOption1': None,
+            'TrackingID1': None,
+            'TrackingName2': None,
+            'TrackingOption2': None,
+            'TrackingID2': None
+        }
+
+        # If tracking data is available, fill in the tracking fields
+        if 'Tracking' in budget and len(budget['Tracking']) > 0:
+            tracking_fields['TrackingName1'] = budget['Tracking'][0].get('Name')
+            tracking_fields['TrackingOption1'] = budget['Tracking'][0].get('Option')
+            tracking_fields['TrackingID1'] = budget['Tracking'][0].get('TrackingCategoryID')
+            if len(budget['Tracking']) > 1:
+                tracking_fields['TrackingName2'] = budget['Tracking'][1].get('Name')
+                tracking_fields['TrackingOption2'] = budget['Tracking'][1].get('Option')
+                tracking_fields['TrackingID2'] = budget['Tracking'][1].get('TrackingCategoryID')
+
         # Iterate over each budget line
         for line in budget['BudgetLines']:
             # Extract common fields from the budget line
@@ -283,11 +311,35 @@ def reshape_budget(data):
                 record = {
                     **budget_common_fields,
                     **line_common_fields,
+                    **tracking_fields,
                     'Period': final_period,
                     'Amount': balance['Amount']
                 }
                 
                 # Append the flattened record to the list
-                flattened_records.append(record)
+                BUDGET_FULL.append(record)
                 
-    return flattened_records
+    return BUDGET_FULL
+
+# Function to flatten the JSON structure manually
+def reshape_tracking_categories(tracking_categories):
+    # List to hold the flattened data
+    TRACKING_CATEGORIES = []
+
+    # Go through each tracking category
+    for category in tracking_categories['TrackingCategories']:
+        # Extract category details
+        category_details = {
+            'Category_Name': category['Name'],
+            'Category_Status': category['Status'],
+            'Category_TrackingCategoryID': category['TrackingCategoryID']
+        }
+        
+        # Go through each option in the tracking category
+        for option in category['Options']:
+            # Create a new record for each option, including the category details
+            record = {**category_details, **option}
+            # Add the record to our list
+            TRACKING_CATEGORIES.append(record)
+    
+    return TRACKING_CATEGORIES

@@ -41,15 +41,15 @@ def get_pnl():
     i = 12
     while i >= 0:
                
-        # 2) API CallS
-        # 2.1) Headers
+        #API CallS
+        #Headers
         headers = { 'xero-tenant-id': xero_tenant_id,
                     'Authorization': 'Bearer ' + new_tokens[0],
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
                 }
         
-        # 2.2) API Call
+        #API Call
         FROM_DATE = (dt.date.today() + dt.timedelta(hours=12) + datedelta(day=1) - datedelta(months=i)).strftime("%Y-%m-%d")
         TO_DATE = ((dt.date.today() + dt.timedelta(hours=12) + datedelta(day=1) - datedelta(months=i)) + dt.timedelta(hours=12) + datedelta(day=31)).strftime("%Y-%m-%d")
         
@@ -61,12 +61,12 @@ def get_pnl():
         URL = 'https://api.xero.com/api.xro/2.0/Reports/ProfitAndLoss' + '?fromDate=' + FROM_DATE + '&toDate=' + TO_DATE + '&trackingCategoryID=1e6e1469-e019-4dba-a45f-38b6bdeb93a6' + '&trackingCategoryID2=6cade25f-8681-4501-9911-227af23affff'
         response = requests.request('GET', URL, headers=headers).json()
 
-        # 3) Reshape response JSON.
+        #Reshape response JSON.
         reshaped_response = reshape.reshape_pnl(response, FROM_DATE, TO_DATE)
 
-        # 4) Downloading existing PnL JSON and appending data pulled within loop.
+        #Downloading existing PnL JSON and appending data pulled within loop.
 
-        # 4.1) Establishing Connection to PnL Blob
+        #Establishing Connection to PnL Blob
         filename = "xero_live_profit_and_loss.json"
         container_name="woodsxerodata"
         connection_string = blob_conn_string.value
@@ -74,19 +74,19 @@ def get_pnl():
         blob_service_client = BlobServiceClient.from_connection_string(connection_string)
         blob_client = container_client.get_blob_client(filename)
 
-        # 4.2) Download the blob.
+        #Download the blob.
         streamdownloader = blob_client.download_blob()
 
-        # 4.3) Read into local variable as JSON.
+        #Read into local variable as JSON.
         all = json.loads(streamdownloader.readall())
         
-        # 4.4) Select and store historical data ONLY to avoid duplication within the JSON file.
+        #Select and store historical data ONLY to avoid duplication within the JSON file.
         historical = [i for i in all if dt.datetime.strptime(i['ToDate'], '%Y-%m-%d') < dt.datetime.strptime(FROM_DATE, '%Y-%m-%d')]
         
-        # 4.5) Appending the existing data with the most current pull of from the API.
+        #Appending the existing data with the most current pull of from the API.
         pnl = historical + reshaped_response
         
-        # 5) Saving data to a new blob in the container.
+        #Saving data to a new blob in the container.
         filename = 'xero_live_profit_and_loss.json'
         container_client.upload_blob(
             name=filename,

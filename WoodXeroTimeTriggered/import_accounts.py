@@ -30,12 +30,12 @@ container_client = ContainerClient.from_connection_string(
 def get_accounts():
     logging.info('Getting accounts data from Xero.')    
     
-    # 1) Refresh Xero API Tokens
+    #Refresh Xero API Tokens
     old_refresh_token = woods_key_vault.get_secret(name = 'xero-refresh-token')
     new_tokens = xero_api.XeroRefreshToken(old_refresh_token.value)
     xero_tenant_id = xero_api.XeroTenants(new_tokens[0])
 
-    # 2) API CALLS
+    #API CALLS
     get_url = 'https://api.xero.com/api.xro/2.0/Accounts'
     response = requests.get(get_url,
                             headers = {
@@ -44,10 +44,10 @@ def get_accounts():
                                 'Accept': 'application/json'
                             }).json()
 
-    # 3) Reshape response JSON.
+    #Reshape response JSON.
     reshaped_response = reshape.reshape_accounts(response)
 
-    # 4) Saving data to a new blob in the container.
+    #Saving data to a new blob in the container.
     filename = 'xero_live_accounts.json'
     container_client.upload_blob(
         name=filename,

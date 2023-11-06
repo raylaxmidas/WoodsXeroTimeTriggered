@@ -29,9 +29,7 @@ container_client = ContainerClient.from_connection_string(
     conn_str=blob_conn_string.value,
     container_name = 'woodsxerodata')
 
-def get_budget_full():
-    logging.info('Getting full budget data from Xero for the past 24 months.')  
-    
+def get_budget_full():   
     #Refresh Xero API Tokens
     old_refresh_token = woods_key_vault.get_secret(name = 'xero-refresh-token')
     new_tokens = xero_api.XeroRefreshToken(old_refresh_token.value)
@@ -77,7 +75,16 @@ def get_budget_full():
         # Process the response data
         reshaped_response = reshape.reshape_budget(budget_response)
         
-        #Saving data to a blob in the container.
+        #Saving raw data to a blob in the container.
+        #filename = f'xero_raw_budget_full_{budget_id}.json'
+        #container_client.upload_blob(
+        #    name=filename,
+        #    data=json.dumps(budget_response),
+        #    blob_type='BlockBlob',
+        #    overwrite=True
+        #)
+
+        #Saving reshaped data to a blob in the container.
         filename = f'xero_live_budget_full_{budget_id}.json'
         container_client.upload_blob(
             name=filename,
@@ -88,6 +95,6 @@ def get_budget_full():
 
         # Save the reshaped data to a file
         #with open(f"budget_{budget_id}.json", "w") as file:
-            #json.dump(reshaped_data, file)
+            #json.dump(reshaped_response, file)
 
-    logging.info('Completed full budget data data import.')  
+    logging.info('Completed full budget data import.')  
